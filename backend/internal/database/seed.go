@@ -137,5 +137,15 @@ func EnsureSchemaAndSeed(db *DB) error {
 		log.Printf("[seed] tài khoản admin mặc định: %s / %s (hãy đổi mật khẩu sau khi đăng nhập)",
 			result.AdminUsername, result.AdminPassword)
 	}
+
+	// Dữ liệu khởi tạo bắt buộc cho các bảng danh mục mới:
+	// 17 vị trí thành phần + 20 vị trí cấp phối chờ.
+	essential, err := SeedEssentialData(db)
+	if err != nil {
+		return err
+	}
+	log.Printf("[seed] khởi tạo: thành phần=%d, cấp phối chờ=%d",
+		essential.ComponentsCreated, essential.WaitingCreated)
+
 	return nil
 }

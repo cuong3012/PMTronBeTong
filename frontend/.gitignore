@@ -3,3 +3,6 @@ dist
 dist-ssr
 *.local
 .vite
+
+# File cache của TypeScript (tsc -b), không commit
+*.tsbuildinfo

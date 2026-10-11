@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,11 @@ type Config struct {
 
 	// Môi trường: "development" hoặc "production"
 	Env string
+
+	// SeedSample: khi true, nạp thêm dữ liệu mẫu (mác bê tông, khách hàng,
+	// công trường, đơn hàng, phiếu cân + chi tiết) để demo/thống kê có số liệu.
+	// Mặc định false để không làm bẩn dữ liệu production.
+	SeedSample bool
 }
 
 // Load đọc cấu hình từ biến môi trường và trả về Config.
@@ -36,6 +42,7 @@ func Load() *Config {
 		JWTExpiryHour:  getEnvInt("JWT_EXPIRY_HOUR", 12),
 		AllowedOrigins: []string{getEnv("CORS_ORIGIN", "http://localhost:5173")},
 		Env:            getEnv("APP_ENV", "development"),
+		SeedSample:     getEnvBool("SEED_SAMPLE", false),
 	}
 }
 
@@ -63,4 +70,21 @@ func getEnvInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+// getEnvBool đọc biến môi trường dạng boolean.
+// Chấp nhận "1", "true", "yes", "on" (không phân biệt hoa/thường) là true.
+func getEnvBool(key string, fallback bool) bool {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }

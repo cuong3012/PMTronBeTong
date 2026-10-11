@@ -401,8 +401,8 @@ Tạo/cập nhật đơn nhận các trường nghiệp vụ như `order_number`
 | `pg4` | REAL | Có | Định lượng phụ gia loại 4 cho 1 m³, tối đa 4 chữ số thập phân; nếu không dùng mặc định `0` |
 | `pg5` | REAL | Có | Định lượng phụ gia loại 5 cho 1 m³, tối đa 4 chữ số thập phân; nếu không dùng mặc định `0` |
 | `pg6` | REAL | Có | Định lượng phụ gia loại 6 cho 1 m³, tối đa 4 chữ số thập phân; nếu không dùng mặc định `0` |
-| `do_sut` | REAL | Có | Độ sụt yêu cầu; đơn vị cần thống nhất (thường ghi cm hoặc mm) |
-| `cuong_do` | REAL | Có | Cường độ bê tông; đơn vị/cách ghi theo tiêu chuẩn trạm (ví dụ MPa hoặc cấp/mác) |
+| `do_sut` | TEXT | Có | Giá trị độ sụt lưu dạng văn bản theo cách ghi của hệ thống hiện tại |
+| `cuong_do` | TEXT | Có | Giá trị cường độ lưu dạng văn bản theo cách ghi của hệ thống hiện tại |
 | `notes` | TEXT | Không | Ghi chú về cấp phối |
 | `created_at` | TEXT | Có | Thời điểm tạo bản ghi |
 | `updated_at` | TEXT | Có | Thời điểm cập nhật gần nhất |
@@ -410,6 +410,25 @@ Tạo/cập nhật đơn nhận các trường nghiệp vụ như `order_number`
 
 - TP1–TP6, XI1–XI5 và PG1–PG6 là các vị trí thành phần như cách gọi hiện tại; trước khi triển khai cần xác nhận mỗi vị trí tương ứng chính xác với vật liệu nào và đơn vị gì. Nếu danh sách vật liệu thay đổi thường xuyên, có thể chuẩn hóa thành bảng thành phần cấp phối riêng ở giai đoạn thiết kế database.
 - Không xóa vật lý mác/cấp phối đã được đơn hàng hoặc sản xuất sử dụng; chuyển `is_active` về `0` và giữ bản ghi để bảo toàn lịch sử. Khi sửa cấp phối đã dùng, cần cân nhắc tạo phiên bản mới để các đơn hàng/mẻ cũ tiếp tục tham chiếu đúng công thức đã áp dụng.
+
+#### `component_catalog` — Danh mục tên thành phần cấp phối
+- Mục đích: lưu danh sách tên và định nghĩa các vị trí thành phần cấp phối thống nhất cho trạm: 6 thành phần cát/đá (`tp1`–`tp6`), 5 xi (`xi1`–`xi5`) và 6 phụ gia (`pg1`–`pg6`). Đây là bảng cấu hình/metadata, không phải dữ liệu sản xuất của từng đơn hàng.
+- Bảng này chỉ cần lưu `slot_name` dạng chuỗi như `TP1`, `TP2`, `XI1`, `PG1`, ... hoặc `(TP1)`, `(TP2)`, ... theo cách hiển thị mong muốn. Điều này đủ để frontend hiển thị tên thành phần, và không cần tách thành nhiều trường riêng cho từng thành phần.
+- Các trường dự kiến:
+
+| Tên trường | Kiểu dữ liệu dự kiến | Bắt buộc | Ý nghĩa |
+|---|---|---:|---|
+| `id` | INTEGER | Có | Khóa chính nội bộ |
+| `slot_name` | TEXT | Có | Tên hiển thị của vị trí thành phần, ví dụ `TP1`, `TP2`, `XI1`, `PG1` |
+| `humidity_values` | TEXT | Có | Chuỗi 6 giá trị độ ẩm của 6 thành phần cát/đá theo thứ tự cố định, ví dụ `"12.5,11.8,10.7,9.6,8.9,7.4"` |
+| `unit` | TEXT | Không | Đơn vị của thành phần (kg, lít, %...), nếu có |
+| `notes` | TEXT | Không | Ghi chú tên/định nghĩa khi cần thêm mô tả |
+| `created_at` | TEXT | Có | Thời điểm tạo |
+| `updated_at` | TEXT | Có | Thời điểm cập nhật gần nhất |
+
+- `component_catalog` là bảng “danh mục thành phần”, nên tên thành phần và thứ tự hiển thị phải được quản lý tập trung ở đây; các bản ghi sản xuất/đơn hàng sẽ tham chiếu theo `slot_code` và `slot_name` nếu cần hiển thị.
+- Với độ ẩm 6 thành phần cát/đá, hệ thống nên lưu trong `weighing_tickets` dưới dạng `humidity_values` là chuỗi `"[TP1],[TP2],[TP3],[TP4],[TP5],[TP6]"` hoặc `"12.5,11.8,10.7,9.6,8.9,7.4"` theo thứ tự cố định. `component_catalog` chỉ cần lưu tên vị trí để render UI, không cần lưu 6 trường riêng cho độ ẩm.
+- Khi cần cập nhật tên thành phần, người dùng chỉ cần cập nhật bảng này; các phiếu cân cũ vẫn giữ bản ghi snapshot của dữ liệu trước đó theo thời điểm tạo.
 
 #### `waiting_mixes` — Cấp phối chờ
 - Mục đích: lưu tối đa 20 vị trí cấp phối chờ để người dùng chọn/điều phối cho sản xuất. Mỗi dòng là một vị trí cố định có số thứ tự; không phải lịch sử các mẻ đã trộn.
@@ -429,6 +448,86 @@ Tạo/cập nhật đơn nhận các trường nghiệp vụ như `order_number`
 - Trường `concrete_grade_id` và `customer_id` lưu ID tham chiếu; API có thể trả thêm thông tin tên/mã tương ứng để giao diện hiển thị.
 - Khi chọn vị trí cấp phối chờ, Backend phải kiểm tra mác bê tông và khách hàng đang hoạt động, khối lượng là số dương, `m3me` không âm, và `status` chỉ là `0` hoặc `1`.
 - Quy tắc tự động chuyển `status` từ `1` sang `0` (ví dụ khi một vị trí khác vừa trộn) chưa được xác định; cần chốt trước khi nối PLC/triển khai nghiệp vụ này.
+
+#### `weighing_tickets` — Thông tin phiếu cân
+- Mục đích: lưu thông tin phiếu cân của mỗi mẻ trộn/đợt cân thực tế, sao cho có thể tra cứu chi tiết sau này. Đây là bản ghi kết quả, không phải cấu hình hoặc danh mục.
+- Các trường dự kiến:
+
+| Tên trường | Kiểu dữ liệu dự kiến | Bắt buộc | Ý nghĩa |
+|---|---|---:|---|
+| `id` | INTEGER | Có | Khóa chính nội bộ của phiếu cân |
+| `ticket_code` | TEXT | Có | Mã phiếu cân; không trùng |
+| `volume_m3` | REAL | Có | Số m³ của phiếu cân |
+| `batch_count` | INTEGER | Có | Số mẻ trong phiếu cân |
+| `m3me` | REAL | Có | Khối lượng m³ trên mỗi mẻ |
+| `order_id` | INTEGER | Có | Đơn hàng liên quan, tham chiếu `orders.id` |
+| `concrete_grade_id` | INTEGER | Có | Mác bê tông đã trộn, tham chiếu `concrete_grades.id` |
+| `concrete_grade_code` | TEXT | Có | Mã mác bê tông trộn, lưu lại bản sao để in/tra cứu đơn giản |
+| `concrete_grade_name` | TEXT | Có | Tên mác bê tông trộn theo danh mục hoặc tên thực tế dùng khi trộn |
+| `printed_concrete_grade_name` | TEXT | Có | Tên mác bê tông in trên phiếu cân; đây là tên hiển thị để in ra giấy, có thể khác với tên trong hệ thống |
+| `humidity_values` | TEXT | Có | Chuỗi 6 giá trị độ ẩm của 6 thành phần cát/đá/nguyên liệu, ví dụ `"12.5,11.8,10.7,9.6,8.9,7.4"` |
+| `standard_per_cube` | REAL | Có | Định mức chuẩn 1 khối bê tông lấy từ mác/cấp phối |
+| `standard_per_batch` | REAL | Có | Định mức của 1 mẻ bê tông trộn |
+| `customer_name` | TEXT | Có | Tên khách hàng lưu lại tại thời điểm tạo phiếu cân |
+| `construction_site_address` | TEXT | Có | Địa chỉ công trường lưu lại tại thời điểm tạo phiếu cân |
+| `material_name` | TEXT | Có | Tên vật liệu/cốt liệu được ghi lại lúc trộn |
+| `runner_user_id` | INTEGER | Không | Người chạy máy/nhân sự thực hiện mẻ, tham chiếu `users.id` |
+| `notes` | TEXT | Không | Ghi chú thêm cho phiếu cân |
+| `created_at` | TEXT | Có | Thời điểm tạo phiếu cân |
+| `updated_at` | TEXT | Có | Thời điểm cập nhật gần nhất |
+
+- `humidity_values` biểu thị 6 giá trị độ ẩm cho 6 thành phần trong quy trình trộn; thứ tự phải cố định và đồng nhất với hệ thống mác/cấp phối để khi in hoặc xuất báo cáo không bị nhầm vị trí.
+- `concrete_grade_code`, `concrete_grade_name` và `printed_concrete_grade_name` cho phép hệ thống lưu mác bê tông theo danh mục và đồng thời in đúng tên mác bê tông theo chuẩn in sổ/phiếu, dù tên hiển thị thực tế của hệ thống có thể khác.
+- `standard_per_cube` và `standard_per_batch` là dữ liệu được chốt tại thời điểm tạo phiếu cân để lưu lịch sử định mức; không nên cập nhật tức thời từ mác/cấp phối nếu đã có phiếu cân cũ.
+- `customer_name` và `construction_site_address` giữ bản sao dữ liệu để phiếu cân có thể in hoặc tra cứu dù dữ liệu khách hàng/công trường thay đổi sau này.
+- `material_name` lưu tên cốt liệu ban đầu ở thời điểm trộn; nếu hệ thống có danh mục vật liệu riêng, có thể thay bằng `material_id` ở giai đoạn sau.
+- `runner_user_id` là ID người chạy máy nếu có. Nếu chỉ cần lưu tên người chạy, có thể thêm trường `runner_name` nhưng không khuyến khích vì dễ mất đồng bộ dữ liệu người dùng.
+
+#### `weighing_ticket_details` — Chi tiết từng mẻ và thành phần theo phiếu cân
+- Mục đích: lưu dữ liệu chốt của từng mẻ trong phiếu cân theo mô hình quen thuộc với hệ thống cũ: 1 mẻ = 1 record, 16 cột thành phần chính, và trường `manual_override_json` lưu các thành phần có giá trị chỉnh tay nếu cần.
+- Đây là bảng dữ liệu thực tế để xuất báo cáo Excel / in phiếu; `weighing_tickets` là phần header/summary cho tổng quan của phiếu cân.
+- Quy tắc thiết kế:
+  - 1 record = 1 mẻ trong 1 phiếu cân
+  - 16 thành phần chính: `tp1`..`tp6`, `xi1`..`xi5`, `pg1`..`pg6`
+  - Nếu thành phần không dùng thì lưu `0` hoặc `NULL`, tùy quy chuẩn dữ liệu.
+  - Nếu có chỉnh tay/cân tay ngoài ở vài thành phần, ghi vào `manual_override_json` dưới dạng chuỗi JSON như `{ "tp3": 1185, "pg2": 9.2 }`.
+  - Nếu không có giá trị manual thì `manual_override_json = NULL` hoặc chuỗi rỗng; khi đọc dữ liệu, backend/frontend có thể bỏ qua nếu trống.
+- Các trường dự kiến:
+
+| Tên trường | Kiểu dữ liệu dự kiến | Bắt buộc | Ý nghĩa |
+|---|---|---:|---|
+| `id` | INTEGER | Có | Khóa chính nội bộ của dòng chi tiết |
+| `weighing_ticket_id` | INTEGER | Có | Liên kết tới `weighing_tickets.id` |
+| `batch_no` | INTEGER | Có | Số mẻ trong phiếu cân |
+| `batch_volume_m3` | REAL | Có | Số m³ của mẻ đó |
+| `mixed_at` | TEXT | Có | Giờ trộn của mẻ này (ISO 8601 hoặc datetime) |
+| `tp1` | REAL | Có | Giá trị thành phần TP1 |
+| `tp2` | REAL | Có | Giá trị thành phần TP2 |
+| `tp3` | REAL | Có | Giá trị thành phần TP3 |
+| `tp4` | REAL | Có | Giá trị thành phần TP4 |
+| `tp5` | REAL | Có | Giá trị thành phần TP5 |
+| `tp6` | REAL | Có | Giá trị thành phần TP6 |
+| `xi1` | REAL | Có | Giá trị thành phần XI1 |
+| `xi2` | REAL | Có | Giá trị thành phần XI2 |
+| `xi3` | REAL | Có | Giá trị thành phần XI3 |
+| `xi4` | REAL | Có | Giá trị thành phần XI4 |
+| `xi5` | REAL | Có | Giá trị thành phần XI5 |
+| `pg1` | REAL | Có | Giá trị thành phần PG1 |
+| `pg2` | REAL | Có | Giá trị thành phần PG2 |
+| `pg3` | REAL | Có | Giá trị thành phần PG3 |
+| `pg4` | REAL | Có | Giá trị thành phần PG4 |
+| `pg5` | REAL | Có | Giá trị thành phần PG5 |
+| `pg6` | REAL | Có | Giá trị thành phần PG6 |
+| `manual_override_json` | TEXT | Không | Chuỗi JSON lưu những thành phần có chỉnh tay ngoài, ví dụ `{ "tp3": 1185, "pg2": 9.2 }` |
+| `notes` | TEXT | Không | Ghi chú riêng cho mẻ hoặc giá trị chỉnh tay |
+| `created_at` | TEXT | Có | Thời điểm tạo dòng dữ liệu |
+| `updated_at` | TEXT | Có | Thời điểm cập nhật gần nhất |
+
+- `manual_override_json` là cách giữ tương thích với hệ thống cũ, dễ nhập liệu và dễ in/export Excel, mà không cần tạo thêm 16 cột `manual_*` cho từng thành phần.
+- Khi `manual_override_json` là `NULL` hoặc rỗng, có thể hiểu là không có giá trị chỉnh tay cho mẻ này; các thành phần khác vẫn dùng giá trị cố định như bình thường.
+- Tùy quy trình nghiệp vụ, các thành phần không dùng có thể lưu là `0` hoặc `NULL`; chỉ cần thống nhất trong toàn bộ hệ thống để tránh nhầm lẫn khi xuất báo cáo.
+- `mixed_at` nên lưu theo kiểu datetime chuẩn (`YYYY-MM-DDTHH:MM:SS`) để frontend dễ render và sort theo thời gian.
+- Nếu muốn xuất báo cáo Excel theo template cũ, frontend có thể đọc 16 cột thành phần trực tiếp và parse `manual_override_json` khi cần highlighting hoặc in chú thích riêng.
 
 #### `customers` — Khách hàng
 - Mục đích: lưu thông tin khách hàng để lập và tra cứu đơn hàng.

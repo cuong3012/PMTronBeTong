@@ -185,6 +185,191 @@ var migrations = []migration{
 			ON mixer_trucks(default_driver_id);
 		`,
 	},
+	{
+		version: 6,
+		name:    "cấu hình trạm một bản ghi, mác bê tông, danh mục thành phần, cấp phối chờ",
+		sql: `
+		-- Bảng stations: chuyển thành cấu hình MỘT bản ghi (mục 13.1).
+		-- SQLite không cho ALTER thêm cột có default phức tạp, nên thêm từng cột
+		-- với giá trị mặc định đơn giản.
+		ALTER TABLE stations ADD COLUMN tp1_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN tp2_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN tp3_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN tp4_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN tp5_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN tp6_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN xi1_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN xi2_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN xi3_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN xi4_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN xi5_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg1_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg2_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg3_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg4_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg5_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN pg6_name TEXT NOT NULL DEFAULT '';
+		ALTER TABLE stations ADD COLUMN component_visibility_mask TEXT NOT NULL DEFAULT '10000000000000000';
+		ALTER TABLE stations ADD COLUMN accumulate_components INTEGER NOT NULL DEFAULT 1;
+		ALTER TABLE stations ADD COLUMN accumulate_cement INTEGER NOT NULL DEFAULT 1;
+		ALTER TABLE stations ADD COLUMN batch_min_volume_m3 REAL NOT NULL DEFAULT 0;
+		ALTER TABLE stations ADD COLUMN batch_max_volume_m3 REAL NOT NULL DEFAULT 0;
+
+		-- Bảng mác bê tông / cấp phối: định mức cho 1 m³.
+		CREATE TABLE IF NOT EXISTS concrete_grades (
+			id            INTEGER PRIMARY KEY AUTOINCREMENT,
+			grade_code    TEXT    NOT NULL UNIQUE,
+			printed_name  TEXT    NOT NULL,
+			tp1 REAL NOT NULL DEFAULT 0,
+			tp2 REAL NOT NULL DEFAULT 0,
+			tp3 REAL NOT NULL DEFAULT 0,
+			tp4 REAL NOT NULL DEFAULT 0,
+			tp5 REAL NOT NULL DEFAULT 0,
+			tp6 REAL NOT NULL DEFAULT 0,
+			xi1 REAL NOT NULL DEFAULT 0,
+			xi2 REAL NOT NULL DEFAULT 0,
+			xi3 REAL NOT NULL DEFAULT 0,
+			xi4 REAL NOT NULL DEFAULT 0,
+			xi5 REAL NOT NULL DEFAULT 0,
+			nuoc REAL NOT NULL DEFAULT 0,
+			pg1 REAL NOT NULL DEFAULT 0,
+			pg2 REAL NOT NULL DEFAULT 0,
+			pg3 REAL NOT NULL DEFAULT 0,
+			pg4 REAL NOT NULL DEFAULT 0,
+			pg5 REAL NOT NULL DEFAULT 0,
+			pg6 REAL NOT NULL DEFAULT 0,
+			do_sut   REAL NOT NULL DEFAULT 0,
+			cuong_do REAL NOT NULL DEFAULT 0,
+			notes        TEXT,
+			is_active    INTEGER NOT NULL DEFAULT 1,
+			created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+		);
+
+		-- Bảng danh mục tên thành phần cấp phối (metadata).
+		CREATE TABLE IF NOT EXISTS component_catalog (
+			id              INTEGER PRIMARY KEY AUTOINCREMENT,
+			slot_name       TEXT    NOT NULL UNIQUE,
+			humidity_values TEXT    NOT NULL DEFAULT '',
+			unit            TEXT,
+			notes           TEXT,
+			created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+		);
+
+		-- Bảng cấp phối chờ: 20 vị trí cố định (stt 1..20).
+		-- concrete_grade_id/customer_id cho phép NULL vì khi mới cài đặt, các
+		-- vị trí còn trống và sẽ được gán mác/khách hàng sau.
+		CREATE TABLE IF NOT EXISTS waiting_mixes (
+			id                INTEGER PRIMARY KEY AUTOINCREMENT,
+			stt               INTEGER NOT NULL UNIQUE,
+			concrete_grade_id INTEGER REFERENCES concrete_grades(id),
+			customer_id       INTEGER REFERENCES customers(id),
+			volume_m3         REAL    NOT NULL DEFAULT 0,
+			m3me              REAL    NOT NULL DEFAULT 0,
+			status            INTEGER NOT NULL DEFAULT 0,
+			created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+		);
+
+		-- Đơn hàng cần tham chiếu mác bê tông (mục 13.1 orders.concrete_grade_id).
+		ALTER TABLE orders ADD COLUMN concrete_grade_id INTEGER REFERENCES concrete_grades(id);
+		`,
+	},
+	{
+		version: 7,
+		name:    "bảng phiếu cân và chi tiết phiếu cân",
+		sql: `
+		-- weighing_tickets: header/tổng quan phiếu cân.
+		CREATE TABLE IF NOT EXISTS weighing_tickets (
+			id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+			ticket_code                 TEXT    NOT NULL UNIQUE,
+			volume_m3                   REAL    NOT NULL,
+			batch_count                 INTEGER NOT NULL,
+			m3me                        REAL    NOT NULL,
+			order_id                    INTEGER NOT NULL REFERENCES orders(id),
+			concrete_grade_id           INTEGER NOT NULL REFERENCES concrete_grades(id),
+			concrete_grade_code         TEXT    NOT NULL,
+			concrete_grade_name         TEXT    NOT NULL,
+			printed_concrete_grade_name TEXT    NOT NULL,
+			humidity_values             TEXT    NOT NULL DEFAULT '',
+			standard_per_cube           REAL    NOT NULL DEFAULT 0,
+			standard_per_batch          REAL    NOT NULL DEFAULT 0,
+			customer_name               TEXT    NOT NULL,
+			construction_site_address   TEXT    NOT NULL DEFAULT '',
+			material_name               TEXT    NOT NULL DEFAULT '',
+			runner_user_id              INTEGER REFERENCES users(id),
+			notes                       TEXT,
+			is_active                   INTEGER NOT NULL DEFAULT 1,
+			created_at                  TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at                  TEXT    NOT NULL DEFAULT (datetime('now'))
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_weighing_tickets_order
+			ON weighing_tickets(order_id);
+
+		-- weighing_ticket_details: từng mẻ trong phiếu cân, 16 cột thành phần.
+		CREATE TABLE IF NOT EXISTS weighing_ticket_details (
+			id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+			weighing_ticket_id   INTEGER NOT NULL REFERENCES weighing_tickets(id) ON DELETE CASCADE,
+			batch_no             INTEGER NOT NULL,
+			batch_volume_m3      REAL    NOT NULL,
+			mixed_at             TEXT    NOT NULL,
+			tp1 REAL NOT NULL DEFAULT 0,
+			tp2 REAL NOT NULL DEFAULT 0,
+			tp3 REAL NOT NULL DEFAULT 0,
+			tp4 REAL NOT NULL DEFAULT 0,
+			tp5 REAL NOT NULL DEFAULT 0,
+			tp6 REAL NOT NULL DEFAULT 0,
+			xi1 REAL NOT NULL DEFAULT 0,
+			xi2 REAL NOT NULL DEFAULT 0,
+			xi3 REAL NOT NULL DEFAULT 0,
+			xi4 REAL NOT NULL DEFAULT 0,
+			xi5 REAL NOT NULL DEFAULT 0,
+			pg1 REAL NOT NULL DEFAULT 0,
+			pg2 REAL NOT NULL DEFAULT 0,
+			pg3 REAL NOT NULL DEFAULT 0,
+			pg4 REAL NOT NULL DEFAULT 0,
+			pg5 REAL NOT NULL DEFAULT 0,
+			pg6 REAL NOT NULL DEFAULT 0,
+			manual_override_json TEXT,
+			notes                TEXT,
+			is_active            INTEGER NOT NULL DEFAULT 1,
+			created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+			UNIQUE (weighing_ticket_id, batch_no)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_weighing_ticket_details_ticket
+			ON weighing_ticket_details(weighing_ticket_id);
+		`,
+	},
+	{
+		version: 8,
+		name:    "đổi độ sụt và cường độ của mác bê tông sang dạng text",
+		sql: `
+		-- do_sut/cuong_do giờ lưu dạng TEXT (ví dụ "10-12", "B25", "M300")
+		-- thay vì số, vì thực tế thường là khoảng hoặc ký hiệu.
+		--
+		-- SQLite không hỗ trợ đổi trực tiếp kiểu cột (ALTER COLUMN), nên:
+		--   1. Thêm cột TEXT mới.
+		--   2. Copy dữ liệu cũ (SQLite tự ép số -> chuỗi khi ghi vào cột TEXT).
+		--   3. Bỏ cột số cũ.
+		--   4. Đổi tên cột mới về tên cũ.
+		ALTER TABLE concrete_grades ADD COLUMN do_sut_text TEXT NOT NULL DEFAULT '';
+		ALTER TABLE concrete_grades ADD COLUMN cuong_do_text TEXT NOT NULL DEFAULT '';
+
+		UPDATE concrete_grades SET
+			do_sut_text   = CAST(do_sut AS TEXT),
+			cuong_do_text = CAST(cuong_do AS TEXT);
+
+		ALTER TABLE concrete_grades DROP COLUMN do_sut;
+		ALTER TABLE concrete_grades DROP COLUMN cuong_do;
+
+		ALTER TABLE concrete_grades RENAME COLUMN do_sut_text TO do_sut;
+		ALTER TABLE concrete_grades RENAME COLUMN cuong_do_text TO cuong_do;
+		`,
+	},
 }
 
 // Migrate chạy tất cả migration chưa được áp dụng lên database.

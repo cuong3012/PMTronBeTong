@@ -7,6 +7,12 @@ import {
   CarOutlined,
   UserOutlined,
   LogoutOutlined,
+  SettingOutlined,
+  ExperimentOutlined,
+  AppstoreOutlined,
+  OrderedListOutlined,
+  FileTextOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
@@ -26,6 +32,36 @@ const menuItems = [
   },
   { key: '/drivers', icon: <IdcardOutlined />, label: 'Tài xế' },
   { key: '/mixer-trucks', icon: <CarOutlined />, label: 'Xe bồn' },
+  {
+    key: '/concrete-grades',
+    icon: <ExperimentOutlined />,
+    label: 'Mác bê tông',
+  },
+  {
+    key: '/component-catalog',
+    icon: <AppstoreOutlined />,
+    label: 'Danh mục thành phần',
+  },
+  {
+    key: '/waiting-mixes',
+    icon: <OrderedListOutlined />,
+    label: 'Cấp phối chờ',
+  },
+  {
+    key: '/weighing-tickets',
+    icon: <FileTextOutlined />,
+    label: 'Phiếu cân',
+  },
+  {
+    key: '/weighing-stats',
+    icon: <BarChartOutlined />,
+    label: 'Thống kê',
+  },
+  {
+    key: '/station-config',
+    icon: <SettingOutlined />,
+    label: 'Cấu hình trạm',
+  },
 ]
 
 // Layout chính sau khi đăng nhập: sidebar + header + nội dung.

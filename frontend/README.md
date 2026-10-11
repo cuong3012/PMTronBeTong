@@ -58,6 +58,17 @@ Backend seed sẵn tài khoản quản trị:
   - Tài xế (`/drivers`)
   - Xe bồn (`/mixer-trucks`)
 
+## Hợp đồng API (đọc trước khi code)
+Xem **[`../docs/API_CONTRACT.md`](../docs/API_CONTRACT.md)** — đặc tả đầy đủ các
+endpoint, request/response, kiểu dữ liệu và mã lỗi mà backend cung cấp.
+
+Các module backend **mới** cần Frontend triển khai thêm:
+- Cấu hình trạm: `/station` (GET/PATCH, một bản ghi).
+- Mác bê tông: `/concrete-grades` (CRUD, xóa mềm, `pg1..pg6` ≤ 4 chữ số thập phân).
+- Danh mục thành phần: `/component-catalog` (CRUD, `GET` trả `{ items }` không phân trang).
+- Cấp phối chờ: `/waiting-mixes` (GET/PATCH, đúng 20 vị trí).
+- Phiếu cân: `/weighing-tickets` (CRUD + `/stats`, kèm `details` khi lấy chi tiết).
+
 ## Phân quyền trên giao diện
 - Nút **Xóa** chỉ hiển thị với vai trò `admin` hoặc `manager`, khớp với
   `requireAdminOrManager` của backend. Ẩn nút chỉ là hỗ trợ UX; backend vẫn

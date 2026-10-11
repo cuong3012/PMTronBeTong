@@ -8,6 +8,12 @@ import CustomersPage from '@/pages/CustomersPage'
 import ConstructionSitesPage from '@/pages/ConstructionSitesPage'
 import DriversPage from '@/pages/DriversPage'
 import TrucksPage from '@/pages/TrucksPage'
+import ConcreteGradesPage from '@/pages/ConcreteGradesPage'
+import ComponentCatalogPage from '@/pages/ComponentCatalogPage'
+import WaitingMixesPage from '@/pages/WaitingMixesPage'
+import WeighingTicketsPage from '@/pages/WeighingTicketsPage'
+import WeighingStatsPage from '@/pages/WeighingStatsPage'
+import StationConfigPage from '@/pages/StationConfigPage'
 import StationRunPage from '@/pages/StationRunPage'
 
 // Định nghĩa toàn bộ route của ứng dụng.
@@ -35,6 +41,12 @@ export default function App() {
         <Route path="/construction-sites" element={<ConstructionSitesPage />} />
         <Route path="/drivers" element={<DriversPage />} />
         <Route path="/mixer-trucks" element={<TrucksPage />} />
+        <Route path="/concrete-grades" element={<ConcreteGradesPage />} />
+        <Route path="/component-catalog" element={<ComponentCatalogPage />} />
+        <Route path="/waiting-mixes" element={<WaitingMixesPage />} />
+        <Route path="/weighing-tickets" element={<WeighingTicketsPage />} />
+        <Route path="/weighing-stats" element={<WeighingStatsPage />} />
+        <Route path="/station-config" element={<StationConfigPage />} />
       </Route>
 
       {/* Trang chạy trạm trộn: hiển thị toàn màn hình, KHÔNG dùng AppLayout
