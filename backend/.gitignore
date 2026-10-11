@@ -1,0 +1,22 @@
+# Thư mục dữ liệu chứa file SQLite — không commit
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# File build
+bin/
+server
+server.exe
+backend.exe
+
+# File môi trường — không commit
+.env
+
+# Báo cáo test
+*.out
+coverage.html
+
+# Tệp của IDE
+.idea/
+.vscode/
