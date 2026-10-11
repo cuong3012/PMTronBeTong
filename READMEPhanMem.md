@@ -1,4 +1,4 @@
-# Hệ thống quản lý trạm trộn bê tông
+# Hệ thống quản lý trạm trộn bê tông IMI
 
 Ứng dụng quản lý trạm trộn bê tông gồm hai phần độc lập:
 
